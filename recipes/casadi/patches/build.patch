@@ -1,0 +1,11 @@
+--- a/swig/python/CMakeLists.txt
++++ b/swig/python/CMakeLists.txt
+@@ -160,7 +160,7 @@ if(WIN32) # dlls don't allow missing symbols
+   endif()
+   target_link_libraries(_casadi ${PYTHON_LIBRARY})
+ endif()
+-target_link_libraries(_casadi casadi)
++target_link_libraries(_casadi casadi ${PYTHON_LIBRARY})
+
+ # Custom installation command for Python
+ add_custom_target(install_python

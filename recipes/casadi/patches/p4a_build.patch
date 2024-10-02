@@ -1,0 +1,11 @@
+--- a/casadi/core/casadi_os.cpp
++++ b/casadi/core/casadi_os.cpp
+@@ -115,7 +115,7 @@ handle_t open_shared_library(const std::string& lib, const std::vector<std::stri
+             flag = RTLD_LAZY | RTLD_LOCAL;
+         }
+     #ifdef WITH_DEEPBIND
+-    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
++    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
+         flag |= RTLD_DEEPBIND;
+     #endif
+     #endif

@@ -1,0 +1,28 @@
+--- a/SConstruct
++++ b/SConstruct
+@@ -3,12 +3,12 @@ import subprocess
+ import sysconfig
+ import numpy as np
+
+-arch = subprocess.check_output(["uname", "-m"], encoding='utf8').rstrip()
++arch = "aarch64"
+
+ python_path = sysconfig.get_paths()['include']
+ cpppath = [
+   '#',
+-  '/usr/lib/include',
++  '/home/ubuntu/Developer/p4a2/.buildozer/android/platform/build-arm64-v8a/build/other_builds/python3/arm64-v8a__ndk_target_21/python3/Include',
+   python_path
+ ]
+
+@@ -27,8 +27,8 @@ ldflags_asan = ["-fsanitize=address"] if GetOption('asan') else []
+
+ env = Environment(
+   ENV=os.environ,
+-  CC='gcc',
+-  CXX='g++',
++  CC='/home/ubuntu/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang',
++  CXX='/home/ubuntu/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++',
+   CCFLAGS=[
+     "-g",
+     "-fPIC",

@@ -1,0 +1,37 @@
+--- a/setup.py
++++ b/setup.py
+@@ -9,8 +9,6 @@ import shutil
+ import struct
+ import sys
+
+-import pkgconfig
+-
+ from distutils.command.clean import clean as _clean
+
+ from setuptools import setup, Extension
+@@ -104,7 +102,7 @@ class build_libcapnp_ext(build_ext_c):
+     def initialize_options(self):
+         build_ext_c.initialize_options(self)
+         self.force_bundled_libcapnp = None
+-        self.force_system_libcapnp = None
++        self.force_system_libcapnp = True
+         self.libcapnp_url = None
+
+     def finalize_options(self):
+@@ -132,16 +130,6 @@ class build_libcapnp_ext(build_ext_c):
+                 ]
+                 self.library_dirs += [os.path.join(capnp_dir, "..", "lib")]
+
+-            # Look for capnproto using pkg-config (and minimum version)
+-            try:
+-                if pkgconfig.installed("capnp", ">= 0.7.0"):
+-                    need_build = False
+-                else:
+-                    need_build = True
+-            except EnvironmentError:
+-                # pkg-config not available in path
+-                need_build = True
+-
+         if need_build:
+             print(
+                 "*WARNING* no libcapnp detected or rebuild forced. "
