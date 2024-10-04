@@ -176,7 +176,7 @@ p4a.branch = develop
 #android.manifest.launch_mode = standard
 
 # (list) Android additional libraries to copy into libs/armeabi
-android.add_libs_arm64_v8a = ~/openpilot/selfdrive/controls/lib/longitudinal_mpc_lib/c_generated_code/libacados_ocp_solver_long.so,~/openpilot/third_party/json11/libjson11.so,~/openpilot/opendbc_repo/opendbc/can/libdbc.so,~/openpilot/third_party/libusb/android/libs/arm64-v8a/libusb1.0.so
+android.add_libs_arm64_v8a = libs/libacados_ocp_solver_long.so,libs/libjson11.so,libs/libdbc.so,libs/libusb1.0.so
 #android.add_libs_armeabi_v7a = libs/android-v7/*.so
 #android.add_libs_x86 = libs/android-x86/*.so
 #android.add_libs_mips = libs/android-mips/*.so

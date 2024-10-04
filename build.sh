@@ -1,1 +1,1 @@
-docker run --rm -it -v $HOME:/work -v $HOME/.buildozer:/home/builder/.buildozer -v $HOME/.gradle:/home/builder/.gradle -w /work/p4a2 p4a2 /bin/bash -c "source ~/.venv/bin/activate && buildozer android debug"
+docker run --rm -it -v ./:/home/builder/flowy -v $HOME/.buildozer:/home/builder/.buildozer -v $HOME/.gradle:/home/builder/.gradle -w /home/builder/flowy builder /bin/bash -c "source ~/.venv/bin/activate && buildozer android debug"

@@ -6,4 +6,3 @@ RUN apt install -y swig zip
 USER builder
 RUN python3 -m venv ~/.venv
 RUN ~/.venv/bin/pip install buildozer setuptools cython
-
