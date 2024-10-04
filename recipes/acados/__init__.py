@@ -6,7 +6,7 @@ import sh
 
 
 class AcadosRecipe(Recipe):
-    version = '0.4.0'
+    version = '0.2.2'
     git_url = 'https://github.com/acados/acados.git'
     generated_libraries = [
         'acados/libacados.so',
@@ -37,12 +37,14 @@ class AcadosRecipe(Recipe):
                              'android.toolchain.cmake')),
                     '-DACADOS_WITH_QPOASES=ON',
                     '-UBLASFEO_TARGET',
-                    '-DBLASFEO_TARGET=GENERIC',
-
+                    '-DBLASFEO_TARGET=ARMV8A_ARM_CORTEX_A57',
+                    '-UHPIPM_TARGET',
+                    '-DHPIPM_TARGET=ARMV8A_ARM_CORTEX_A57',
+                    '-DCMAKE_ASM_FLAGS=-DOS_LINUX',
                     '..',
                     _env=env)
             shprint(sh.make)
             
-            sh.cp('-a', *self.generated_libraries, self.ctx.get_libs_dir(arch.arch))
+            shprint(sh.cp, '-a', *self.generated_libraries, self.ctx.get_libs_dir(arch.arch))
 
 recipe = AcadosRecipe()

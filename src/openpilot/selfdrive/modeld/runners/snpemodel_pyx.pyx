@@ -1,5 +1,5 @@
 # distutils: language = c++
-# cython: c_string_encoding=ascii, language_level=3
+# cython: c_string_encoding=ascii
 
 import os
 from libcpp cimport bool

@@ -1,3 +1,6 @@
 test
+playsound
+test_sound
 test_translations
-test_ui/report_1
+ui_snapshot
+test_ui/report

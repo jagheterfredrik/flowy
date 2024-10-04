@@ -5,12 +5,19 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <time.h>
 
 #include <capnp/serialize.h>
 
 #include "cereal/gen/cpp/log.capnp.h"
-#include "common/timing.h"
 #include "msgq/ipc.h"
+
+#ifdef __APPLE__
+#define CLOCK_BOOTTIME CLOCK_MONOTONIC
+#endif
+
+#define MSG_MULTIPLE_PUBLISHERS 100
+
 
 class SubMaster {
 public:
@@ -46,7 +53,10 @@ public:
 
   cereal::Event::Builder initEvent(bool valid = true) {
     cereal::Event::Builder event = initRoot<cereal::Event>();
-    event.setLogMonoTime(nanos_since_boot());
+    struct timespec t;
+    clock_gettime(CLOCK_BOOTTIME, &t);
+    uint64_t current_time = t.tv_sec * 1000000000ULL + t.tv_nsec;
+    event.setLogMonoTime(current_time);
     event.setValid(valid);
     return event;
   }

@@ -118,18 +118,9 @@ cloudlog = log = SwagLogger()
 log.setLevel(logging.DEBUG)
 
 
-outhandler = logging.StreamHandler()
-
-print_level = os.environ.get('LOGPRINT', 'warning')
-if print_level == 'debug':
-  outhandler.setLevel(logging.DEBUG)
-elif print_level == 'info':
-  outhandler.setLevel(logging.INFO)
-elif print_level == 'warning':
-  outhandler.setLevel(logging.WARNING)
-
-ipchandler = UnixDomainSocketHandler(SwagFormatter(log))
-
-log.addHandler(outhandler)
-# logs are sent through IPC before writing to disk to prevent disk I/O blocking
-log.addHandler(ipchandler)
+import sys
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+log.addHandler(handler)

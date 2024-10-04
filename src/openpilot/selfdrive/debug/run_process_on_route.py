@@ -3,7 +3,8 @@
 import argparse
 
 from openpilot.selfdrive.test.process_replay.process_replay import CONFIGS, replay_process
-from openpilot.tools.lib.logreader import LogReader, save_log
+from openpilot.tools.lib.helpers import save_log
+from openpilot.tools.lib.logreader import LogReader
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Run process on route and create new logs",
@@ -25,6 +26,6 @@ if __name__ == "__main__":
   inputs = [i for i in inputs if i.which() not in produces]
   outputs = sorted(inputs + outputs, key=lambda x: x.logMonoTime)
 
-  fn = f"{args.route.replace('/', '_')}_{args.process}.zst"
-  print(f"Saving log to {fn}")
+  fn = f"{args.route.replace('/', '_')}_{args.process}.bz2"
+  print(f"Saved log to {fn}")
   save_log(fn, outputs)

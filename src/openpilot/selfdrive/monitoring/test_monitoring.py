@@ -4,7 +4,7 @@ from cereal import car, log
 from openpilot.common.realtime import DT_DMON
 from openpilot.selfdrive.monitoring.helpers import DriverMonitoring, DRIVER_MONITOR_SETTINGS
 
-EventName = car.OnroadEvent.EventName
+EventName = car.CarEvent.EventName
 dm_settings = DRIVER_MONITOR_SETTINGS()
 
 TEST_TIMESPAN = 120  # seconds

@@ -13,7 +13,7 @@ package.domain = org.kivy
 source.dir = src
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,json,capnp,so
+source.include_exts = py,png,jpg,kv,atlas,json,capnp,so,dbc
 
 # (list) List of inclusions using pattern matching
 #source.include_patterns = assets/*,images/*.png
@@ -37,7 +37,8 @@ version.filename = %(source.dir)s/main.py
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,oscpy,casadi,opendbc,msgq,numpy==v1.26.4,pyzmq
+requirements = python3,kivy,oscpy,casadi,numpy==v1.26.4,pyzmq,smbus2,acados,pycapnp,libusb1,tqdm,crcmod
+# opendbc,msgq
 
 
 # (str) Custom source folders for requirements
@@ -54,11 +55,11 @@ requirements = python3,kivy,oscpy,casadi,opendbc,msgq,numpy==v1.26.4,pyzmq
 #icon.filename = %(source.dir)s/data/icon.png
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
-# orientation = all
+orientation = portrait
 android.archs = arm64-v8a
 
 # (list) List of service to declare
-services = Pong:service.py,Radard:radard.py
+services = Pong:service.py,Radard:radard.py,Controlsd:controlsd.py,Plannerd:plannerd.py
 
 #
 # OSX Specific
@@ -175,7 +176,7 @@ p4a.branch = develop
 #android.manifest.launch_mode = standard
 
 # (list) Android additional libraries to copy into libs/armeabi
-#android.add_libs_armeabi = libs/android/*.so
+android.add_libs_arm64_v8a = ~/openpilot/selfdrive/controls/lib/longitudinal_mpc_lib/c_generated_code/libacados_ocp_solver_long.so,~/openpilot/third_party/json11/libjson11.so,~/openpilot/opendbc_repo/opendbc/can/libdbc.so,~/openpilot/third_party/libusb/android/libs/arm64-v8a/libusb1.0.so
 #android.add_libs_armeabi_v7a = libs/android-v7/*.so
 #android.add_libs_x86 = libs/android-x86/*.so
 #android.add_libs_mips = libs/android-mips/*.so

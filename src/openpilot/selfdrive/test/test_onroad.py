@@ -1,3 +1,4 @@
+import bz2
 import math
 import json
 import os
@@ -8,7 +9,6 @@ import shutil
 import subprocess
 import time
 import numpy as np
-import zstandard as zstd
 from collections import Counter, defaultdict
 from functools import cached_property
 from pathlib import Path
@@ -19,11 +19,10 @@ from cereal.services import SERVICE_LIST
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.timeout import Timeout
 from openpilot.common.params import Params
-from openpilot.selfdrive.selfdrived.events import EVENTS, ET
-from openpilot.selfdrive.test.helpers import set_params_enabled, release_only
+from openpilot.selfdrive.controls.lib.events import EVENTS, ET
 from openpilot.system.hardware import HARDWARE
+from openpilot.selfdrive.test.helpers import set_params_enabled, release_only
 from openpilot.system.hardware.hw import Paths
-from openpilot.system.loggerd.uploader import LOG_COMPRESSION_LEVEL
 from openpilot.tools.lib.logreader import LogReader
 
 """
@@ -32,37 +31,36 @@ CPU usage budget
 * total CPU usage of openpilot (sum(PROCS.values())
   should not exceed MAX_TOTAL_CPU
 """
-
-MAX_TOTAL_CPU = 265.  # total for all 8 cores
+MAX_TOTAL_CPU = 250.  # total for all 8 cores
 PROCS = {
   # Baseline CPU usage by process
-  "selfdrive.controls.controlsd": 16.0,
-  "selfdrive.selfdrived.selfdrived": 16.0,
-  "selfdrive.car.card": 30.0,
+  "selfdrive.controls.controlsd": 32.0,
+  "selfdrive.car.card": 22.0,
   "./loggerd": 14.0,
   "./encoderd": 17.0,
   "./camerad": 14.5,
-  "selfdrive.controls.plannerd": 9.0,
+  "./locationd": 11.0,
+  "selfdrive.controls.plannerd": 11.0,
   "./ui": 18.0,
   "selfdrive.locationd.paramsd": 9.0,
   "./sensord": 7.0,
-  "selfdrive.controls.radard": 2.0,
-  "selfdrive.modeld.modeld": 17.0,
-  "selfdrive.modeld.dmonitoringmodeld": 11.0,
+  "selfdrive.controls.radard": 7.0,
+  "selfdrive.modeld.modeld": 13.0,
+  "selfdrive.modeld.dmonitoringmodeld": 8.0,
   "system.hardware.hardwared": 3.87,
   "selfdrive.locationd.calibrationd": 2.0,
   "selfdrive.locationd.torqued": 5.0,
-  "selfdrive.locationd.locationd": 25.0,
-  "selfdrive.ui.soundd": 3.38,
+  "selfdrive.ui.soundd": 3.5,
   "selfdrive.monitoring.dmonitoringd": 4.0,
   "./proclogd": 1.54,
   "system.logmessaged": 0.2,
   "system.tombstoned": 0,
   "./logcatd": 0,
-  "system.micd": 5.0,
+  "system.micd": 6.0,
   "system.timed": 0,
   "selfdrive.pandad.pandad": 0,
   "system.statsd": 0.4,
+  "selfdrive.navd.navd": 0.4,
   "system.loggerd.uploader": (0.5, 15.0),
   "system.loggerd.deleter": 0.1,
 }
@@ -89,12 +87,11 @@ TIMINGS = {
   "carControl": [2.5, 0.35],
   "controlsState": [2.5, 0.35],
   "longitudinalPlan": [2.5, 0.5],
-  "driverAssistance": [2.5, 0.5],
   "roadCameraState": [2.5, 0.35],
   "driverCameraState": [2.5, 0.35],
   "modelV2": [2.5, 0.35],
   "driverStateV2": [2.5, 0.40],
-  "livePose": [2.5, 0.35],
+  "liveLocationKalman": [2.5, 0.35],
   "wideRoadCameraState": [1.5, 0.35],
 }
 
@@ -170,10 +167,10 @@ class TestOnroad:
     cls.log_sizes = {}
     for f in cls.log_path.iterdir():
       assert f.is_file()
-      cls.log_sizes[f] = f.stat().st_size / 1e6
+      cls.log_sizes[f]  = f.stat().st_size / 1e6
       if f.name in ("qlog", "rlog"):
         with open(f, 'rb') as ff:
-          cls.log_sizes[f] = len(zstd.compress(ff.read(), LOG_COMPRESSION_LEVEL)) / 1e6
+          cls.log_sizes[f] = len(bz2.compress(ff.read())) / 1e6
 
 
   @cached_property
@@ -210,7 +207,7 @@ class TestOnroad:
       if f.name == "qcamera.ts":
         assert 2.15 < sz < 2.35
       elif f.name == "qlog":
-        assert 0.4 < sz < 0.55
+        assert 0.7 < sz < 1.0
       elif f.name == "rlog":
         assert 5 < sz < 50
       elif f.name.endswith('.hevc'):
@@ -259,7 +256,6 @@ class TestOnroad:
     for proc_name, expected_cpu in PROCS.items():
 
       err = ""
-      exp = "???"
       cpu_usage = 0.
       x = plogs_by_proc[proc_name]
       if len(x) > 2:
@@ -313,7 +309,7 @@ class TestOnroad:
     assert max(mems) - min(mems) <= 3.0
 
   def test_gpu_usage(self):
-    assert self.gpu_procs == {"weston", "ui", "camerad", "selfdrive.modeld.modeld", "selfdrive.modeld.dmonitoringmodeld"}
+    assert self.gpu_procs == {"weston", "ui", "camerad", "selfdrive.modeld.modeld"}
 
   def test_camera_processing_time(self):
     result = "\n"
@@ -419,10 +415,10 @@ class TestOnroad:
     startup_alert = None
     for msg in self.lrs[0]:
       # can't use onroadEvents because the first msg can be dropped while loggerd is starting up
-      if msg.which() == "selfdriveState":
-        startup_alert = msg.selfdriveState.alertText1
+      if msg.which() == "controlsState":
+        startup_alert = msg.controlsState.alertText1
         break
-    expected = EVENTS[car.OnroadEvent.EventName.startup][ET.PERMANENT].alert_text_1
+    expected = EVENTS[car.CarEvent.EventName.startup][ET.PERMANENT].alert_text_1
     assert startup_alert == expected, "wrong startup alert"
 
   def test_engagable(self):
@@ -432,6 +428,6 @@ class TestOnroad:
         if evt.noEntry:
           no_entries[evt.name] += 1
 
-    eng = [m.selfdriveState.engageable for m in self.service_msgs['selfdriveState']]
+    eng = [m.controlsState.engageable for m in self.service_msgs['controlsState']]
     assert all(eng), \
-           f"Not engageable for whole segment:\n- selfdriveState.engageable: {Counter(eng)}\n- No entry events: {no_entries}"
+           f"Not engageable for whole segment:\n- controlsState.engageable: {Counter(eng)}\n- No entry events: {no_entries}"

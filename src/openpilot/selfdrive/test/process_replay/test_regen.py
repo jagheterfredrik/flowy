@@ -15,13 +15,13 @@ TESTED_SEGMENTS = [
 
 
 def ci_setup_data_readers(route, sidx):
-  lr = LogReader(get_url(route, sidx, "rlog.bz2"))
+  lr = LogReader(get_url(route, sidx, "rlog"))
   frs = {
-    'roadCameraState': FrameReader(get_url(route, sidx, "fcamera.hevc")),
+    'roadCameraState': FrameReader(get_url(route, sidx, "fcamera")),
     'driverCameraState': DummyFrameReader.zero_dcamera()
   }
   if next((True for m in lr if m.which() == "wideRoadCameraState"), False):
-    frs["wideRoadCameraState"] = FrameReader(get_url(route, sidx, "ecamera.hevc"))
+    frs["wideRoadCameraState"] = FrameReader(get_url(route, sidx, "ecamera"))
 
   return lr, frs
 
