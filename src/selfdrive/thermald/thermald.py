@@ -52,7 +52,7 @@ def get_device_state():
   
   msg.deviceState.freeSpacePercent = get_available_percent(default=100.0)
   msg.deviceState.memoryUsagePercent = 0#int(round(psutil.virtual_memory().percent))
-  msg.deviceState.cpuUsagePercent = 0#[int(round(n)) for n in psutil.cpu_percent(percpu=True)]
+  msg.deviceState.cpuUsagePercent = [0]#[int(round(n)) for n in psutil.cpu_percent(percpu=True)]
 
   # Power
   # if (not is_android()) or (is_android_rooted()):

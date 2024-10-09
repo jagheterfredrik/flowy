@@ -42,14 +42,14 @@ def load_interfaces(brand_names):
     path = f'selfdrive.car.{brand_name}'
     CarInterface = __import__(path + '.interface', fromlist=['CarInterface']).CarInterface
 
-    if os.path.exists(BASEDIR + '/' + path.replace('.', '/') + '/carstate.py'):
+    try:
       CarState = __import__(path + '.carstate', fromlist=['CarState']).CarState
-    else:
+    except:
       CarState = None
 
-    if os.path.exists(BASEDIR + '/' + path.replace('.', '/') + '/carcontroller.py'):
+    try:
       CarController = __import__(path + '.carcontroller', fromlist=['CarController']).CarController
-    else:
+    except:
       CarController = None
 
     for model_name in brand_names[brand_name]:
