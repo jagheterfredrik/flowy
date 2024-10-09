@@ -1,6 +1,7 @@
+#!/usr/bin/env python3
 import random
 import time
-from typing import Sized, cast
+import unittest
 
 import cereal.messaging as messaging
 from cereal.messaging.tests.test_messaging import events, random_sock, random_socks, \
@@ -8,32 +9,32 @@ from cereal.messaging.tests.test_messaging import events, random_sock, random_so
                                                   zmq_sleep
 
 
-class TestSubMaster:
+class TestSubMaster(unittest.TestCase):
 
-  def setup_method(self):
+  def setUp(self):
     # ZMQ pub socket takes too long to die
     # sleep to prevent multiple publishers error between tests
     zmq_sleep(3)
 
   def test_init(self):
     sm = messaging.SubMaster(events)
-    for p in [sm.updated, sm.recv_time, sm.recv_frame, sm.alive,
-              sm.sock, sm.data, sm.logMonoTime, sm.valid]:
-      assert len(cast(Sized, p)) == len(events)
+    for p in [sm.updated, sm.rcv_time, sm.rcv_frame, sm.alive,
+              sm.sock, sm.freq, sm.data, sm.logMonoTime, sm.valid]:
+      self.assertEqual(len(p), len(events))
 
   def test_init_state(self):
     socks = random_socks()
     sm = messaging.SubMaster(socks)
-    assert sm.frame == -1
-    assert not any(sm.updated.values())
-    assert not any(sm.alive.values())
-    assert all(t == 0. for t in sm.recv_time.values())
-    assert all(f == 0 for f in sm.recv_frame.values())
-    assert all(t == 0 for t in sm.logMonoTime.values())
+    self.assertEqual(sm.frame, -1)
+    self.assertFalse(any(sm.updated.values()))
+    self.assertFalse(any(sm.alive.values()))
+    self.assertTrue(all(t == 0. for t in sm.rcv_time.values()))
+    self.assertTrue(all(f == 0 for f in sm.rcv_frame.values()))
+    self.assertTrue(all(t == 0 for t in sm.logMonoTime.values()))
 
-    for p in [sm.updated, sm.recv_time, sm.recv_frame, sm.alive,
-              sm.sock, sm.data, sm.logMonoTime, sm.valid]:
-      assert len(cast(Sized, p)) == len(socks)
+    for p in [sm.updated, sm.rcv_time, sm.rcv_frame, sm.alive,
+              sm.sock, sm.freq, sm.data, sm.logMonoTime, sm.valid]:
+      self.assertEqual(len(p), len(socks))
 
   def test_getitem(self):
     sock = "carState"
@@ -57,8 +58,8 @@ class TestSubMaster:
       msg = messaging.new_message(sock)
       pub_sock.send(msg.to_bytes())
       sm.update(1000)
-      assert sm.frame == i
-      assert all(sm.updated.values())
+      self.assertEqual(sm.frame, i)
+      self.assertTrue(all(sm.updated.values()))
 
   def test_update_timeout(self):
     sock = random_sock()
@@ -68,31 +69,9 @@ class TestSubMaster:
       start_time = time.monotonic()
       sm.update(timeout)
       t = time.monotonic() - start_time
-      assert t >= timeout/1000.
-      assert t < 5
-      assert not any(sm.updated.values())
-
-  def test_avg_frequency_checks(self):
-    for poll in (True, False):
-      sm = messaging.SubMaster(["modelV2", "carParams", "carState", "cameraOdometry", "liveCalibration"],
-                               poll=("modelV2" if poll else None),
-                               frequency=(20. if not poll else None))
-
-      checks = {
-        "carState": (20, 20),
-        "modelV2": (20, 20 if poll else 10),
-        "cameraOdometry": (20, 10),
-        "liveCalibration": (4, 4),
-        "carParams": (None, None),
-      }
-
-      for service, (max_freq, min_freq) in checks.items():
-        if max_freq is not None:
-          assert sm._check_avg_freq(service)
-          assert sm.freq_tracker[service].max_freq == max_freq*1.2
-          assert sm.freq_tracker[service].min_freq == min_freq*0.8
-        else:
-          assert not sm._check_avg_freq(service)
+      self.assertGreaterEqual(t, timeout/1000.)
+      self.assertLess(t, 5)
+      self.assertFalse(any(sm.updated.values()))
 
   def test_alive(self):
     pass
@@ -116,12 +95,12 @@ class TestSubMaster:
       pub_sock.send(msg.to_bytes())
       time.sleep(0.01)
     sm.update(1000)
-    assert sm[sock].vEgo == n
+    self.assertEqual(sm[sock].vEgo, n)
 
 
-class TestPubMaster:
+class TestPubMaster(unittest.TestCase):
 
-  def setup_method(self):
+  def setUp(self):
     # ZMQ pub socket takes too long to die
     # sleep to prevent multiple publishers error between tests
     zmq_sleep(3)
@@ -154,4 +133,8 @@ class TestPubMaster:
         if capnp:
           msg.clear_write_flag()
           msg = msg.to_bytes()
-        assert msg == recvd, i
+        self.assertEqual(msg, recvd, i)
+
+
+if __name__ == "__main__":
+  unittest.main()

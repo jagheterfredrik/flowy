@@ -6,7 +6,7 @@ import sh
 
 
 class AcadosRecipe(Recipe):
-    version = '0.4.0'
+    version = '0.2.2'
     git_url = 'https://github.com/acados/acados.git'
     generated_libraries = [
         'acados/libacados.so',

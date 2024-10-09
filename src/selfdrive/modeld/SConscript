@@ -1,0 +1,14 @@
+Import('env', 'messaging')
+lenv = env.Clone()
+
+libs = ['capnp', 'zmq', 'kj', messaging]
+
+common_src = [
+  "models/commonmodel.cc",
+  "models/driving.cc",
+  "models/nav.cc",
+]
+
+parser = lenv.SharedLibrary('modelparser', common_src, LIBS=libs)
+
+lenv.Program('modelparsed', ["modelparsed.cc"]+common_src, LIBS=libs)

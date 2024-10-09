@@ -1,19 +1,19 @@
 [app]
 
 # (str) Title of your application
-title = Kivy service OSC demo
+title = Flowy
 
 # (str) Package name
-package.name = oscservice
+package.name = python
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = org.kivy
+package.domain = ai.flow
 
 # (str) Source code where the main.py live
 source.dir = src
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,json,capnp,so
+source.include_exts = py,png,jpg,kv,atlas,json,capnp,so,dbc,toml,npy,yaml
 
 # (list) List of inclusions using pattern matching
 #source.include_patterns = assets/*,images/*.png
@@ -27,9 +27,11 @@ source.include_exts = py,png,jpg,kv,atlas,json,capnp,so
 # (list) List of exclusions using pattern matching
 #source.exclude_patterns = license,images/*/*.jpg
 
+version = 0.1
+
 # (str) Application versioning (method 1)
-version.regex = __version__ = '(.*)'
-version.filename = %(source.dir)s/main.py
+# version.regex = __version__ = '(.*)'
+# version.filename = %(source.dir)s/main.py
 
 # (str) Application versioning (method 2)
 # version.regex = __version__ = ['"](.*)['"]
@@ -37,7 +39,8 @@ version.filename = %(source.dir)s/main.py
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,oscpy,casadi,opendbc,msgq,numpy==v1.26.4,pyzmq
+requirements = python3,casadi,numpy==v1.26.4,pyzmq,smbus2,acados,pycapnp,libusb1,tqdm,crcmod,cffi,pyyaml,atomicwrites
+# opendbc,msgq
 
 
 # (str) Custom source folders for requirements
@@ -54,11 +57,11 @@ requirements = python3,kivy,oscpy,casadi,opendbc,msgq,numpy==v1.26.4,pyzmq
 #icon.filename = %(source.dir)s/data/icon.png
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
-# orientation = all
+orientation = portrait
 android.archs = arm64-v8a
 
 # (list) List of service to declare
-services = Pong:service.py,Radard:radard.py
+services = Calibrationd:calibrationd.py,Controlsd:controlsd.py,Keyvald:keyvald.py,Logmessaged:logmessaged.py,Plannerd:plannerd.py,Radard:radard.py,Thermald:thermald.py
 
 #
 # OSX Specific
@@ -76,6 +79,8 @@ osx.kivy_version = 1.9.1
 #
 # Android specific
 #
+
+android.debug_artifact = aar
 
 # (bool) Indicate if the application should be fullscreen or not
 fullscreen = 0
@@ -175,7 +180,7 @@ p4a.branch = develop
 #android.manifest.launch_mode = standard
 
 # (list) Android additional libraries to copy into libs/armeabi
-#android.add_libs_armeabi = libs/android/*.so
+android.add_libs_arm64_v8a = libs/lib*.so
 #android.add_libs_armeabi_v7a = libs/android-v7/*.so
 #android.add_libs_x86 = libs/android-x86/*.so
 #android.add_libs_mips = libs/android-mips/*.so
@@ -214,7 +219,8 @@ p4a.local_recipes = recipes
 #p4a.hook =
 
 # (str) Bootstrap to use for android builds
-p4a.bootstrap = sdl2
+# p4a.bootstrap = sdl2
+p4a.bootstrap = service_library
 
 # (int) port number to specify an explicit --port= p4a argument (eg for bootstrap flask)
 #p4a.port =

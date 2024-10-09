@@ -1,12 +1,26 @@
+#include <time.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string>
 #include <mutex>
 
-#include "cereal/services.h"
-#include "cereal/messaging/messaging.h"
+#include "services.h"
+#include "messaging.h"
 
 const bool SIMULATION = (getenv("SIMULATION") != nullptr) && (std::string(getenv("SIMULATION")) == "1");
+
+static inline uint64_t nanos_since_boot() {
+  struct timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+  return t.tv_sec * 1000000000ULL + t.tv_nsec;
+}
+
+static const service *get_service(const char *name) {
+  for (const auto &it : services) {
+    if (strcmp(it.name, name) == 0) return &it;
+  }
+  return nullptr;
+}
 
 static inline bool inList(const std::vector<const char *> &list, const char *value) {
   for (auto &v : list) {
@@ -17,7 +31,7 @@ static inline bool inList(const std::vector<const char *> &list, const char *val
 
 class MessageContext {
 public:
-  MessageContext() : ctx_(nullptr) {}
+  MessageContext() : ctx_(nullptr) {};
   ~MessageContext() { delete ctx_; }
   inline Context *context() {
     std::call_once(init_flag, [=]() { ctx_ = Context::create(); });
@@ -34,7 +48,7 @@ struct SubMaster::SubMessage {
   std::string name;
   SubSocket *socket = nullptr;
   int freq = 0;
-  bool updated = false, alive = false, valid = false, ignore_alive;
+  bool updated = false, alive = false, valid = true, ignore_alive;
   uint64_t rcv_time = 0, rcv_frame = 0;
   void *allocated_msg_reader = nullptr;
   bool is_polled = false;
@@ -47,9 +61,8 @@ SubMaster::SubMaster(const std::vector<const char *> &service_list, const std::v
                      const char *address, const std::vector<const char *> &ignore_alive) {
   poller_ = Poller::create();
   for (auto name : service_list) {
-    assert(services.count(std::string(name)) > 0);
-
-    service serv = services.at(std::string(name));
+    const service *serv = get_service(name);
+    assert(serv != nullptr);
     SubSocket *socket = SubSocket::create(message_context.context(), name, address ? address : "127.0.0.1", true);
     assert(socket != 0);
     bool is_polled = inList(poll, name) || poll.empty();
@@ -57,7 +70,7 @@ SubMaster::SubMaster(const std::vector<const char *> &service_list, const std::v
     SubMessage *m = new SubMessage{
       .name = name,
       .socket = socket,
-      .freq = serv.frequency,
+      .freq = serv->frequency,
       .ignore_alive = inList(ignore_alive, name),
       .allocated_msg_reader = malloc(sizeof(capnp::FlatArrayMessageReader)),
       .is_polled = is_polled};
@@ -103,7 +116,7 @@ void SubMaster::update(int timeout) {
 void SubMaster::update_msgs(uint64_t current_time, const std::vector<std::pair<std::string, cereal::Event::Reader>> &messages){
   if (++frame == UINT64_MAX) frame = 1;
 
-  for (auto &kv : messages) {
+  for(auto &kv : messages) {
     auto m_find = services_.find(kv.first);
     if (m_find == services_.end()){
       continue;
@@ -171,7 +184,7 @@ uint64_t SubMaster::rcv_time(const char *name) const {
 
 cereal::Event::Reader &SubMaster::operator[](const char *name) const {
   return services_.at(name)->event;
-}
+};
 
 SubMaster::~SubMaster() {
   delete poller_;
@@ -186,7 +199,7 @@ SubMaster::~SubMaster() {
 
 PubMaster::PubMaster(const std::vector<const char *> &service_list) {
   for (auto name : service_list) {
-    assert(services.count(name) > 0);
+    assert(get_service(name) != nullptr);
     PubSocket *socket = PubSocket::create(message_context.context(), name);
     assert(socket);
     sockets_[name] = socket;
