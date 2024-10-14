@@ -32,7 +32,7 @@ def get_startup_event(car_recognized, controller_available, fw_seen):
 def get_one_can(logcan):
   while True:
     can = messaging.recv_one_retry(logcan)
-    if 'can' in can.to_dict() and len(can.can) > 0:
+    if len(can.can) > 0:
       return can
 
 

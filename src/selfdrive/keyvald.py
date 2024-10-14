@@ -22,9 +22,11 @@ class ParamsServer:
     def put_thread(exit_event):
         while not exit_event.is_set():
             key, val = sock_put.recv_multipart()
+            print(f"put: {key} - {len(val)}")
             params.put(key, val)
+            print("putted")
             sock_put.send(b"1")
-        
+
     @staticmethod
     def get_thread(exit_event):
         while not exit_event.is_set():

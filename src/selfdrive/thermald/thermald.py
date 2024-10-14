@@ -17,7 +17,7 @@ from common.realtime import DT_TRML, sec_since_boot
 from common.system import is_android, is_android_rooted
 from selfdrive.controls.lib.alertmanager import set_offroad_alert
 from system.hardware import HARDWARE
-from selfdrive.loggerd.config import get_available_percent
+# from selfdrive.loggerd.config import get_available_percent
 from selfdrive.statsd import statlog
 from system.swaglog import cloudlog
 
@@ -50,7 +50,7 @@ def get_device_state():
   # System utilization
   msg = messaging.new_message("deviceState")
   
-  msg.deviceState.freeSpacePercent = get_available_percent(default=100.0)
+  msg.deviceState.freeSpacePercent = 50.0# get_available_percent(default=100.0)
   msg.deviceState.memoryUsagePercent = 0#int(round(psutil.virtual_memory().percent))
   msg.deviceState.cpuUsagePercent = [0]#[int(round(n)) for n in psutil.cpu_percent(percpu=True)]
 
@@ -73,11 +73,11 @@ def get_device_state():
   msg.deviceState.cpuTempC = [0.0]*8 # TODO: find a better way to get temps that works across platforms.
   
   # desktops have bad temperature readings causing false positives.
-  if not is_android():
-    msg.deviceState.cpuTempC = [0.0]*8
+  # if not is_android():
+    # msg.deviceState.cpuTempC = [0.0]*8
 
-  msg.deviceState.networkType = log.DeviceState.NetworkType.none
-  msg.deviceState.networkStrength = log.DeviceState.NetworkStrength.unknown
+  # msg.deviceState.networkType = log.DeviceState.NetworkType.none
+  # msg.deviceState.networkStrength = log.DeviceState.NetworkStrength.unknown
 
   return msg
 
@@ -145,8 +145,9 @@ def thermald_thread(end_event, hw_queue):
 
     # this one is only used for offroad
     temp_sources = [
-      msg.deviceState.memoryTempC,
-      sum(msg.deviceState.cpuTempC)/len(msg.deviceState.cpuTempC),
+      20,
+      # msg.deviceState.memoryTempC,
+      # sum(msg.deviceState.cpuTempC)/len(msg.deviceState.cpuTempC),
       #max(msg.deviceState.gpuTempC),
     ]
     offroad_comp_temp = offroad_temp_filter.update(max(temp_sources))
@@ -220,11 +221,11 @@ def thermald_thread(end_event, hw_queue):
         params.put_bool("IsEngaged", engaged)
         engaged_prev = engaged
 
-      try:
-        with open('/dev/kmsg', 'w') as kmsg:
-          kmsg.write(f"<3>[thermald] engaged: {engaged}\n")
-      except Exception:
-        pass
+      # try:
+      #   with open('/dev/kmsg', 'w') as kmsg:
+      #     kmsg.write(f"<3>[thermald] engaged: {engaged}\n")
+      # except Exception:
+      #   pass
 
     if should_start:
       off_ts = None

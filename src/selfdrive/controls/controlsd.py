@@ -29,7 +29,6 @@ from selfdrive.controls.lib.alertmanager import AlertManager, set_offroad_alert
 from selfdrive.controls.lib.vehicle_model import VehicleModel
 from system.hardware import HARDWARE
 
-
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
 LANE_DEPARTURE_THRESHOLD = 0.1
@@ -55,14 +54,21 @@ ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
 ACTIVE_STATES = (State.enabled, State.softDisabling, State.overriding)
 ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 
+can_sends_total = 0
+
 
 class Controls:
   def __init__(self, sm=None, pm=None, can_sock=None, CI=None):
+    print("Controls init 1")
     config_realtime_process(4, Priority.CTRL_HIGH)
+
+    print("Controls init 2")
 
     # Ensure the current branch is cached, otherwise the first iteration of controlsd lags
     self.branch = get_short_branch("")
     self.params = Params()
+
+    print("Controls init 3")
 
     # Setup sockets
     self.pm = pm
@@ -70,19 +76,25 @@ class Controls:
       self.pm = messaging.PubMaster(['sendcan', 'controlsState', 'carState',
                                      'carControl', 'carEvents', 'carParams'])
 
+    print("Controls init 4")
+
     if self.params.get_bool("F3", block=True):
       self.camera_packets = ["wideRoadCameraState", "roadCameraState"]
     else:
       self.camera_packets = ["roadCameraState"]
+
+    print("Controls init 5")
 
     self.can_sock = can_sock
     if can_sock is None:
       can_timeout = None if os.environ.get('NO_CAN_TIMEOUT', False) else 20
       self.can_sock = messaging.sub_sock('can', timeout=can_timeout)
 
+    print("Controls init 6")
+
     self.sm = sm
     if self.sm is None:
-      ignore = ['driverCameraState', 'testJoystick', 'driverMonitoringState', 'radarState'] if SIMULATION else ['driverCameraState', 'testJoystick', 'driverMonitoringState']
+      ignore = ['driverCameraState', 'testJoystick', 'driverMonitoringState', 'radarState'] if SIMULATION else ['driverCameraState', 'testJoystick', 'driverMonitoringState', 'managerState']
 
       if NOSENSOR:
         ignore += ['liveParameters', 'liveTorqueParameters', 'liveLocationKalman']
@@ -94,24 +106,33 @@ class Controls:
                                      'managerState', 'liveParameters', 'radarState', 'liveTorqueParameters', 'testJoystick'] + self.camera_packets,
                                       ignore_alive=ignore, ignore_avg_freq=['radarState', 'testJoystick', 'longitudinalPlan'])
 
+    print("Controls init 7")
+
     if CI is None:
       # wait for one pandaState and one CAN packet
       print("Waiting for CAN messages...")
       get_one_can(self.can_sock)
+      print("Controls init 8")
 
       num_pandas = len(messaging.recv_one_retry(self.sm.sock['pandaStates']).pandaStates)
+      print("Controls init 9")
       experimental_long_allowed = self.params.get_bool("ExperimentalLongitudinalEnabled")
+      print("Controls init 10")
       self.CI, self.CP = get_car(self.can_sock, self.pm.sock['sendcan'], experimental_long_allowed, num_pandas)
+      print("Controls init 11")
     else:
       self.CI, self.CP = CI, CI.CP
 
     self.joystick_mode = self.params.get_bool("JoystickDebugMode") or self.CP.notCar
+    print("Controls init 12")
 
     # set alternative experiences from parameters
     self.disengage_on_accelerator = False # self.params.get_bool("DisengageOnAccelerator")
     self.CP.alternativeExperience = 0
     if not self.disengage_on_accelerator:
       self.CP.alternativeExperience |= ALTERNATIVE_EXPERIENCE.DISABLE_DISENGAGE_ON_GAS
+    
+    print("Controls init 13")
 
     # read params
     self.is_metric = False #self.params.get_bool("IsMetric")
@@ -130,6 +151,8 @@ class Controls:
       safety_config.safetyModel = car.CarParams.SafetyModel.noOutput
       self.CP.safetyConfigs = [safety_config]
 
+    print("Controls init 14")
+
     # Write CarParams for radard
     cp_bytes = self.CP.to_bytes()
     self.params.put("CarParams", cp_bytes)
@@ -141,13 +164,19 @@ class Controls:
     if not self.CP.openpilotLongitudinalControl:
       self.params.remove("ExperimentalMode")
 
+    print("Controls init 15")
+
     self.CC = car.CarControl.new_message()
     self.CS_prev = car.CarState.new_message()
     self.AM = AlertManager()
     self.events = Events()
 
+    print("Controls init 16")
+
     self.LoC = LongControl(self.CP)
+    print("Controls init 16.1")
     self.VM = VehicleModel(self.CP)
+    print("Controls init 16.2")
 
     self.LaC: LatControl
     if self.CP.steerControlType == car.CarParams.SteerControlType.angle:
@@ -188,6 +217,8 @@ class Controls:
     self.sm['liveParameters'].valid = True
     self.can_log_mono_time = 0
 
+    print("Controls init 17")
+
     self.startup_event = get_startup_event(car_recognized, controller_available, len(self.CP.carFw) > 0)
 
     if not sounds_available:
@@ -204,9 +235,13 @@ class Controls:
       self.events.add(EventName.joystickDebug, static=True)
       self.startup_event = None
 
+    print("Controls init 18")
+
     # controlsd is driven by can recv, expected at 100Hz
-    self.rk = Ratekeeper(100, print_delay_threshold=None)
+    self.rk = Ratekeeper(50, print_delay_threshold=None)
     self.prof = Profiler(False)  # off by default
+
+    print("Controls init 19")
 
   def set_initial_state(self):
     if REPLAY:

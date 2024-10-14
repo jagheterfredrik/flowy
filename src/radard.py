@@ -1,3 +1,14 @@
 import runpy
 
-runpy.run_module("selfdrive.controls.radard", run_name= "__main__")
+import time
+from common.params import Params
+params = Params()
+
+from selfdrive.controls.radard import main
+
+while True:
+    controlsd_onroad = params.get_bool("IsOnroad")
+    if controlsd_onroad:
+        main()
+        break
+    time.sleep(.1)

@@ -61,7 +61,7 @@ orientation = portrait
 android.archs = arm64-v8a
 
 # (list) List of service to declare
-services = Calibrationd:calibrationd.py,Controlsd:controlsd.py,Keyvald:keyvald.py,Logmessaged:logmessaged.py,Plannerd:plannerd.py,Radard:radard.py,Thermald:thermald.py
+services = Calibrationd:calibrationd.py,Controlsd:controlsd.py,Debugd:debugd.py,Flowreset:flowreset.py,Keyvald:keyvald.py,Logmessaged:logmessaged.py,Plannerd:plannerd.py,Radard:radard.py,Thermald:thermald.py
 
 #
 # OSX Specific
