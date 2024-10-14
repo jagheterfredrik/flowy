@@ -39,7 +39,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,casadi,numpy==v1.26.4,pyzmq,smbus2,acados,pycapnp,libusb1,tqdm,crcmod,cffi,pyyaml,atomicwrites
+requirements = python3,casadi,numpy,pyzmq,smbus2,acados,pycapnp,libusb1,tqdm,crcmod,cffi,pyyaml,atomicwrites
 # opendbc,msgq
 
 

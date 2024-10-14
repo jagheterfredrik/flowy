@@ -2,7 +2,7 @@
 import os
 import capnp
 
-CEREAL_PATH = os.path.dirname(os.path.abspath(__file__))
+CEREAL_PATH = "cereal"
 capnp.remove_import_hook()
 
 OP_CAPNP = os.environ.get("OP_CAPNP", False)

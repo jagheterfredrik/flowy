@@ -9,7 +9,7 @@ from pythonforandroid.recipe import PythonRecipe
 class CasadiRecipe(PythonRecipe):
     version = '3.6.6'
     url = 'https://github.com/casadi/casadi/archive/refs/tags/{version}.zip'
-    depends = ['python3', 'setuptools', 'numpy==v1.26.4', 'swig']
+    depends = ['python3', 'setuptools', 'numpy', 'swig']
     patches = ['patches/p4a_build.patch', 'patches/build.patch']
     generated_libraries = [
         'libcasadi.so',
@@ -64,9 +64,9 @@ class CasadiRecipe(PythonRecipe):
             shprint(sh.make, 'python_source')
         
         super().build_arch(arch, **kwargs)
-        with current_directory(build_dir):
-            sh.cp('-a', sh.glob('./lib.*/casadi/lib*.so'),
-                    self.ctx.get_libs_dir(arch.arch))
+        # with current_directory(build_dir):
+        #     sh.cp('-a', sh.glob('./lib.*/casadi/lib*.so'),
+        #             self.ctx.get_libs_dir(arch.arch))
 
 
 
