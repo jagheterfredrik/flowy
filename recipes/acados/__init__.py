@@ -14,11 +14,6 @@ class AcadosRecipe(Recipe):
         'external/qpoases/lib/libqpOASES_e.so',
         'external/hpipm/libhpipm.so',
     ]
-    patches = ['build.patch']
-
-    # Git removed the patch on a second run
-    # def is_patched(self, arch):
-        # return False
 
     def build_arch(self, arch, **kwargs):        
         build_dir = join(self.get_build_dir(arch.arch), 'build')
@@ -32,6 +27,7 @@ class AcadosRecipe(Recipe):
                     '-DCMAKE_TOOLCHAIN_FILE={}'.format(
                         join(self.ctx.ndk_dir, 'build', 'cmake',
                              'android.toolchain.cmake')),
+                    '-DCMAKE_SYSTEM_NAME=Linux',
                     '-DACADOS_WITH_QPOASES=ON',
                     '-UBLASFEO_TARGET',
                     '-DBLASFEO_TARGET=ARMV8A_ARM_CORTEX_A57',

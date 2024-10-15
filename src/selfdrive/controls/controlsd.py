@@ -59,16 +59,13 @@ can_sends_total = 0
 
 class Controls:
   def __init__(self, sm=None, pm=None, can_sock=None, CI=None):
-    print("Controls init 1")
     config_realtime_process(4, Priority.CTRL_HIGH)
 
-    print("Controls init 2")
 
     # Ensure the current branch is cached, otherwise the first iteration of controlsd lags
     self.branch = get_short_branch("")
     self.params = Params()
 
-    print("Controls init 3")
 
     # Setup sockets
     self.pm = pm
@@ -76,21 +73,18 @@ class Controls:
       self.pm = messaging.PubMaster(['sendcan', 'controlsState', 'carState',
                                      'carControl', 'carEvents', 'carParams'])
 
-    print("Controls init 4")
 
     if self.params.get_bool("F3", block=True):
       self.camera_packets = ["wideRoadCameraState", "roadCameraState"]
     else:
       self.camera_packets = ["roadCameraState"]
 
-    print("Controls init 5")
 
     self.can_sock = can_sock
     if can_sock is None:
       can_timeout = None if os.environ.get('NO_CAN_TIMEOUT', False) else 20
       self.can_sock = messaging.sub_sock('can', timeout=can_timeout)
 
-    print("Controls init 6")
 
     self.sm = sm
     if self.sm is None:
@@ -106,25 +100,19 @@ class Controls:
                                      'managerState', 'liveParameters', 'radarState', 'liveTorqueParameters', 'testJoystick'] + self.camera_packets,
                                       ignore_alive=ignore, ignore_avg_freq=['radarState', 'testJoystick', 'longitudinalPlan'])
 
-    print("Controls init 7")
 
     if CI is None:
       # wait for one pandaState and one CAN packet
       print("Waiting for CAN messages...")
       get_one_can(self.can_sock)
-      print("Controls init 8")
 
       num_pandas = len(messaging.recv_one_retry(self.sm.sock['pandaStates']).pandaStates)
-      print("Controls init 9")
       experimental_long_allowed = self.params.get_bool("ExperimentalLongitudinalEnabled")
-      print("Controls init 10")
       self.CI, self.CP = get_car(self.can_sock, self.pm.sock['sendcan'], experimental_long_allowed, num_pandas)
-      print("Controls init 11")
     else:
       self.CI, self.CP = CI, CI.CP
 
     self.joystick_mode = self.params.get_bool("JoystickDebugMode") or self.CP.notCar
-    print("Controls init 12")
 
     # set alternative experiences from parameters
     self.disengage_on_accelerator = False # self.params.get_bool("DisengageOnAccelerator")
@@ -132,7 +120,6 @@ class Controls:
     if not self.disengage_on_accelerator:
       self.CP.alternativeExperience |= ALTERNATIVE_EXPERIENCE.DISABLE_DISENGAGE_ON_GAS
     
-    print("Controls init 13")
 
     # read params
     self.is_metric = False #self.params.get_bool("IsMetric")
@@ -151,7 +138,6 @@ class Controls:
       safety_config.safetyModel = car.CarParams.SafetyModel.noOutput
       self.CP.safetyConfigs = [safety_config]
 
-    print("Controls init 14")
 
     # Write CarParams for radard
     cp_bytes = self.CP.to_bytes()
@@ -164,19 +150,15 @@ class Controls:
     if not self.CP.openpilotLongitudinalControl:
       self.params.remove("ExperimentalMode")
 
-    print("Controls init 15")
 
     self.CC = car.CarControl.new_message()
     self.CS_prev = car.CarState.new_message()
     self.AM = AlertManager()
     self.events = Events()
 
-    print("Controls init 16")
 
     self.LoC = LongControl(self.CP)
-    print("Controls init 16.1")
     self.VM = VehicleModel(self.CP)
-    print("Controls init 16.2")
 
     self.LaC: LatControl
     if self.CP.steerControlType == car.CarParams.SteerControlType.angle:
@@ -217,7 +199,6 @@ class Controls:
     self.sm['liveParameters'].valid = True
     self.can_log_mono_time = 0
 
-    print("Controls init 17")
 
     self.startup_event = get_startup_event(car_recognized, controller_available, len(self.CP.carFw) > 0)
 
@@ -235,13 +216,11 @@ class Controls:
       self.events.add(EventName.joystickDebug, static=True)
       self.startup_event = None
 
-    print("Controls init 18")
 
     # controlsd is driven by can recv, expected at 100Hz
     self.rk = Ratekeeper(50, print_delay_threshold=None)
     self.prof = Profiler(False)  # off by default
 
-    print("Controls init 19")
 
   def set_initial_state(self):
     if REPLAY:
@@ -755,18 +734,23 @@ class Controls:
 
     # Sample data from sockets and get a carState
     CS = self.data_sample()
+    if self.i % 500 == 0: print(f"1 Took {sec_since_boot() - start_time}")
 
     self.update_events(CS)
+    if self.i % 500 == 0: print(f"2 Took {sec_since_boot() - start_time}")
 
     if not self.read_only and self.initialized:
       # Update control state
       self.state_transition(CS)
+    if self.i % 500 == 0: print(f"3 Took {sec_since_boot() - start_time}")
 
     # Compute actuators (runs PID loops and lateral MPC)
     CC, lac_log = self.state_control(CS)
+    if self.i % 500 == 0: print(f"4 Took {sec_since_boot() - start_time}")
 
     # Publish data
     self.publish_logs(CS, start_time, CC, lac_log)
+    if self.i % 500 == 0: print(f"5 Took {sec_since_boot() - start_time}")
 
     self.CS_prev = CS
 
