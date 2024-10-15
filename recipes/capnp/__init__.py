@@ -1,15 +1,14 @@
-from pythonforandroid.recipe import Recipe, IncludedFilesBehaviour
+from pythonforandroid.recipe import Recipe
 from pythonforandroid.logger import shprint
 from pythonforandroid.util import current_directory
 from os.path import join, basename
 import sh
 
 
-class CapnpRecipe(IncludedFilesBehaviour, Recipe):
+class CapnpRecipe(Recipe):
     version = 'v1.0.1'
-    # url = 'git+https://github.com/capnproto/capnproto.git'
-    src_filename = "../../../capnproto"
-    # patches = ['path.patch']
+    url = 'git+https://github.com/capnproto/capnproto.git'
+    patches = ['path.patch']
 
     def get_recipe_env(self, arch, **kwargs):
         env = super().get_recipe_env(arch)
