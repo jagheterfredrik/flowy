@@ -27,7 +27,7 @@ class AcadosRecipe(Recipe):
                     '-DCMAKE_TOOLCHAIN_FILE={}'.format(
                         join(self.ctx.ndk_dir, 'build', 'cmake',
                              'android.toolchain.cmake')),
-                    '-DCMAKE_SYSTEM_NAME=Linux',
+                    '-DCMAKE_ASM_FLAGS=-DOS_LINUX',
                     '-DACADOS_WITH_QPOASES=ON',
                     '-UBLASFEO_TARGET',
                     '-DBLASFEO_TARGET=ARMV8A_ARM_CORTEX_A57',
