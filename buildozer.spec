@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = Flowy
+title = Openpilot
 
 # (str) Package name
-package.name = python
+package.name = openpilot
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = ai.flow

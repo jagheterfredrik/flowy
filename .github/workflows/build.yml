@@ -18,5 +18,5 @@ jobs:
     - name: Archive apk
       uses: actions/upload-artifact@v4
       with:
-        name: bin
-        path: bin/
+        name: openpilot-0.1-arm64-v8a-debug.aar
+        path: bin/openpilot-0.1-arm64-v8a-debug.aar
