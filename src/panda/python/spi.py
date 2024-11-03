@@ -5,22 +5,19 @@ import fcntl
 import math
 import time
 import struct
-import logging
 import threading
 from contextlib import contextmanager
 from functools import reduce
-from typing import Callable, List, Optional
+from collections.abc import Callable
 
 from .base import BaseHandle, BaseSTBootloaderHandle, TIMEOUT
 from .constants import McuType, MCU_TYPE_BY_IDCODE, USBPACKET_MAX_SIZE
-from .utils import crc8_pedal
+from .utils import logger
 
 try:
   import spidev
-  import spidev2
 except ImportError:
   spidev = None
-  spidev2 = None
 
 # Constants
 SYNC = 0x5A
@@ -35,6 +32,20 @@ MAX_XFER_RETRY_COUNT = 5
 XFER_SIZE = 0x40*31
 
 DEV_PATH = "/dev/spidev0.0"
+
+
+def crc8(data):
+  crc = 0xFF    # standard init value
+  poly = 0xD5   # standard crc8: x8+x7+x6+x4+x2+1
+  size = len(data)
+  for i in range(size - 1, -1, -1):
+    crc ^= data[i]
+    for _ in range(8):
+      if ((crc & 0x80) != 0):
+        crc = ((crc << 1) ^ poly) & 0xFF
+      else:
+        crc <<= 1
+  return crc
 
 
 class PandaSpiException(Exception):
@@ -156,23 +167,23 @@ class PandaSpiHandle(BaseHandle):
   def _transfer_spidev(self, spi, endpoint: int, data, timeout: int, max_rx_len: int = 1000, expect_disconnect: bool = False) -> bytes:
     max_rx_len = max(USBPACKET_MAX_SIZE, max_rx_len)
 
-    logging.debug("- send header")
+    logger.debug("- send header")
     packet = struct.pack("<BBHH", SYNC, endpoint, len(data), max_rx_len)
     packet += bytes([self._calc_checksum(packet), ])
     spi.xfer2(packet)
 
-    logging.debug("- waiting for header ACK")
+    logger.debug("- waiting for header ACK")
     self._wait_for_ack(spi, HACK, MIN_ACK_TIMEOUT_MS, 0x11)
 
-    logging.debug("- sending data")
+    logger.debug("- sending data")
     packet = bytes([*data, self._calc_checksum(data)])
     spi.xfer2(packet)
 
     if expect_disconnect:
-      logging.debug("- expecting disconnect, returning")
+      logger.debug("- expecting disconnect, returning")
       return b""
     else:
-      logging.debug("- waiting for data ACK")
+      logger.debug("- waiting for data ACK")
       preread_len = USBPACKET_MAX_SIZE + 1  # read enough for a controlRead
       dat = self._wait_for_ack(spi, DACK, timeout, 0x13, length=3 + preread_len)
 
@@ -194,6 +205,7 @@ class PandaSpiHandle(BaseHandle):
       return dat[3:-1]
 
   def _transfer_kernel_driver(self, spi, endpoint: int, data, timeout: int, max_rx_len: int = 1000, expect_disconnect: bool = False) -> bytes:
+    import spidev2
     self.tx_buf[:len(data)] = data
     self.ioctl_data.endpoint = endpoint
     self.ioctl_data.tx_length = len(data)
@@ -210,21 +222,21 @@ class PandaSpiHandle(BaseHandle):
     return bytes(self.rx_buf[:ret])
 
   def _transfer(self, endpoint: int, data, timeout: int, max_rx_len: int = 1000, expect_disconnect: bool = False) -> bytes:
-    logging.debug("starting transfer: endpoint=%d, max_rx_len=%d", endpoint, max_rx_len)
-    logging.debug("==============================================")
+    logger.debug("starting transfer: endpoint=%d, max_rx_len=%d", endpoint, max_rx_len)
+    logger.debug("==============================================")
 
     n = 0
     start_time = time.monotonic()
     exc = PandaSpiException()
     while (timeout == 0) or (time.monotonic() - start_time) < timeout*1e-3:
       n += 1
-      logging.debug("\ntry #%d", n)
+      logger.debug("\ntry #%d", n)
       with self.dev.acquire() as spi:
         try:
           return self._transfer_raw(spi, endpoint, data, timeout, max_rx_len, expect_disconnect)
         except PandaSpiException as e:
           exc = e
-          logging.debug("SPI transfer failed, retrying", exc_info=True)
+          logger.debug("SPI transfer failed, retrying", exc_info=True)
 
     raise exc
 
@@ -233,13 +245,13 @@ class PandaSpiHandle(BaseHandle):
     def _get_version(spi) -> bytes:
       spi.writebytes(vers_str)
 
-      logging.debug("- waiting for echo")
+      logger.debug("- waiting for echo")
       start = time.monotonic()
       while True:
         version_bytes = spi.readbytes(len(vers_str) + 2)
         if bytes(version_bytes).startswith(vers_str):
           break
-        if (time.monotonic() - start) > 0.01:
+        if (time.monotonic() - start) > 0.001:
           raise PandaSpiMissingAck
 
       rlen = struct.unpack("<H", bytes(version_bytes[-2:]))[0]
@@ -249,7 +261,7 @@ class PandaSpiHandle(BaseHandle):
       # get response
       dat = spi.readbytes(rlen + 1)
       resp = dat[:-1]
-      calculated_crc = crc8_pedal(bytes(version_bytes + resp))
+      calculated_crc = crc8(bytes(version_bytes + resp))
       if calculated_crc != dat[-1]:
         raise PandaSpiBadChecksum
       return bytes(resp)
@@ -261,7 +273,7 @@ class PandaSpiHandle(BaseHandle):
           return _get_version(spi)
         except PandaSpiException as e:
           exc = e
-          logging.debug("SPI get protocol version failed, retrying", exc_info=True)
+          logger.debug("SPI get protocol version failed, retrying", exc_info=True)
     raise exc
 
   # libusb1 functions
@@ -307,7 +319,7 @@ class STBootloaderSPIHandle(BaseSTBootloaderHandle):
       with self.dev.acquire() as spi:
         spi.xfer([self.SYNC, ])
         try:
-          self._get_ack(spi)
+          self._get_ack(spi, 0.1)
         except (PandaSpiNackResponse, PandaSpiMissingAck):
           # NACK ok here, will only ACK the first time
           pass
@@ -321,7 +333,7 @@ class STBootloaderSPIHandle(BaseSTBootloaderHandle):
     start_time = time.monotonic()
     while data not in (self.ACK, self.NACK) and (time.monotonic() - start_time < timeout):
       data = spi.xfer([0x00, ])[0]
-      time.sleep(0.001)
+      time.sleep(0)
     spi.xfer([self.ACK, ])
 
     if data == self.NACK:
@@ -329,13 +341,13 @@ class STBootloaderSPIHandle(BaseSTBootloaderHandle):
     elif data != self.ACK:
       raise PandaSpiMissingAck
 
-  def _cmd_no_retry(self, cmd: int, data: Optional[List[bytes]] = None, read_bytes: int = 0, predata=None) -> bytes:
+  def _cmd_no_retry(self, cmd: int, data: list[bytes] | None = None, read_bytes: int = 0, predata=None) -> bytes:
     ret = b""
     with self.dev.acquire() as spi:
       # sync + command
       spi.xfer([self.SYNC, ])
       spi.xfer([cmd, cmd ^ 0xFF])
-      self._get_ack(spi, timeout=0.1)
+      self._get_ack(spi, timeout=0.01)
 
       # "predata" - for commands that send the first data without a checksum
       if predata is not None:
@@ -359,14 +371,14 @@ class STBootloaderSPIHandle(BaseSTBootloaderHandle):
 
     return bytes(ret)
 
-  def _cmd(self, cmd: int, data: Optional[List[bytes]] = None, read_bytes: int = 0, predata=None) -> bytes:
+  def _cmd(self, cmd: int, data: list[bytes] | None = None, read_bytes: int = 0, predata=None) -> bytes:
     exc = PandaSpiException()
     for n in range(MAX_XFER_RETRY_COUNT):
       try:
         return self._cmd_no_retry(cmd, data, read_bytes, predata)
       except PandaSpiException as e:
         exc = e
-        logging.debug("SPI transfer failed, %d retries left", MAX_XFER_RETRY_COUNT - n - 1, exc_info=True)
+        logger.debug("SPI transfer failed, %d retries left", MAX_XFER_RETRY_COUNT - n - 1, exc_info=True)
     raise exc
 
   def _checksum(self, data: bytes) -> bytes:
@@ -403,12 +415,6 @@ class STBootloaderSPIHandle(BaseSTBootloaderHandle):
 
   # *** PandaDFU API ***
 
-  def erase_app(self):
-    self.erase_sector(1)
-
-  def erase_bootstub(self):
-    self.erase_sector(0)
-
   def get_mcu_type(self):
     return self._mcu_type
 
@@ -421,7 +427,7 @@ class STBootloaderSPIHandle(BaseSTBootloaderHandle):
   def program(self, address, dat):
     bs = 256  # max block size for writing to flash over SPI
     dat += b"\xFF" * ((bs - len(dat)) % bs)
-    for i in range(0, len(dat) // bs):
+    for i in range(len(dat) // bs):
       block = dat[i * bs:(i + 1) * bs]
       self._cmd(0x31, data=[
         struct.pack('>I', address + i*bs),

@@ -64,9 +64,9 @@ class CasadiRecipe(PythonRecipe):
             shprint(sh.make, 'python_source')
         
         super().build_arch(arch, **kwargs)
-        # with current_directory(build_dir):
-        #     sh.cp('-a', sh.glob('./lib.*/casadi/lib*.so'),
-        #             self.ctx.get_libs_dir(arch.arch))
+        with current_directory(build_dir):
+            sh.cp('-a', sh.glob('./lib.*/casadi/lib*.so'),
+                    self.ctx.get_libs_dir(arch.arch))
 
 
 
